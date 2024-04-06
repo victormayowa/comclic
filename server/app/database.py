@@ -28,7 +28,7 @@ def get_mongo_uri() -> str:
             f"@{settings.DB_HOST}:{settings.DB_PORT}/{settings.DB_NAME}"
         )
 
-    return f"mongodb://{settings.DB_HOST}:{settings.DB_PORT}/" f"{settings.DB_NAME}"
+    return f"{DATABASE_URL}"  # mongodb://{settings.DB_HOST}:{settings.DB_PORT}/" f"{settings.DB_NAME}"
 
 
 # def get_rabbitmq_uri() -> str:

@@ -8,7 +8,7 @@ fastapi = "*"
 uvicorn = "*"
 python-dotenv = "*"
 beanie = "*"
-pydantic = {extras = ["email"], version = "*"}
+pydantic = "*"
 pydantic-settings = "*"
 
 [dev-packages]
