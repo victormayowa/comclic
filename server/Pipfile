@@ -10,6 +10,11 @@ python-dotenv = "*"
 beanie = "*"
 pydantic = "*"
 pydantic-settings = "*"
+fastapi-jwt = "*"
+python-decouple = "*"
+python-jose = {extras = ["cryptography"], version = "*"}
+passlib = {extras = ["bcrypt"], version = "*"}
+python-multipart = "*"
 
 [dev-packages]
 

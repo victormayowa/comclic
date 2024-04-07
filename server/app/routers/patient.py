@@ -1,68 +1,79 @@
-from fastapi import APIRouter, HTTPException
-from datetime import date
+from fastapi import APIRouter, Depends, HTTPException
+from datetime import date, datetime
 from typing import List
-from .. import models
-from motor.motor_asyncio import AsyncIOMotorClient
+
+from app.models import Patient, User, Roles
+from app.database import db
 
 router = APIRouter()
 
-# Connect to MongoDB
-client = AsyncIOMotorClient("mongodb://localhost:27017")
-db = client["your_database_name"]
-collection = db["patients"]
+
+async def get_current_user(username: str = Depends(User)):
+    """Dependency to get the current user."""
+    return username
 
 
-# Endpoint to add patient visit record
-@router.post("/patients/visits/")
-async def add_patient_visit(patient_visit: models.PatientVisit):
-    # Add patient visit record to the database
-    await collection.insert_one(patient_visit.dict())
-    return {"message": "Patient visit record added successfully"}
+async def is_user_doctor(current_user: User = Depends(get_current_user)):
+    """Dependency to check if the current user is a doctor."""
+    if Roles.DR not in current_user.roles:
+        raise HTTPException(status_code=403, detail="Forbidden: User is not a doctor")
 
 
-# Endpoint to update patient visit record
-@router.put("/patients/visits/{visit_id}")
-async def update_patient_visit(visit_id: str, patient_visit: models.PatientVisit):
-    # Update patient visit record in the database
-    await collection.update_one({"_id": visit_id}, {"$set": patient_visit.dict()})
-    return {"message": f"Patient visit record with ID {visit_id} updated successfully"}
+@router.post(
+    "/patients",
+    response_model=Patient,
+    status_code=201,
+    dependencies=[Depends(is_user_doctor)],
+)
+async def create_patient(patient: Patient):
+    """Create a new patient record."""
+    new_patient = await db.save(patient)
+    return new_patient
 
 
-# Endpoint to delete patient visit record
-@router.delete("/patients/visits/{visit_id}")
-async def delete_patient_visit(visit_id: str):
-    # Delete patient visit record from the database
-    await collection.delete_one({"_id": visit_id})
-    return {"message": f"Patient visit record with ID {visit_id} deleted successfully"}
+@router.get(
+    "/patients", response_model=List[Patient], dependencies=[Depends(is_user_doctor)]
+)
+async def list_patients():
+    """Retrieve a list of patients."""
+    patients = await Patient.find_all()
+    return patients
 
 
-# Endpoint to get total number of patient visits
-@router.get("/patients/visits/total")
-async def get_total_patient_visits():
-    # Get total number of patient visits from the database
-    total_visits = await collection.count_documents({})
-    return {"total_visits": total_visits}
+@router.get(
+    "/patients/{patient_id}",
+    response_model=Patient,
+    dependencies=[Depends(is_user_doctor)],
+)
+async def get_patient(patient_id: str):
+    """Retrieve a specific patient's details by ID."""
+    patient = await Patient.find_one({"_id": patient_id})
+    if not patient:
+        raise HTTPException(status_code=404, detail="Patient not found")
+    return patient
 
 
-# Endpoint to get dynamic chart of gender distribution per current month for each clinic
-@router.get("/patients/visits/gender-distribution")
-async def get_gender_distribution_chart():
-    # Logic to generate dynamic chart of gender distribution per current month for each clinic
-    # Placeholder logic for generating chart
-    return {
-        "message": "Dynamic chart of gender distribution per current month for each clinic"
-    }
+@router.put(
+    "/patients/{patient_id}",
+    response_model=Patient,
+    dependencies=[Depends(is_user_doctor)],
+)
+async def update_patient(patient_id: str, patient: Patient):
+    """Update an existing patient record."""
+    existing_patient = await Patient.find_one({"_id": patient_id})
+    if not existing_patient:
+        raise HTTPException(status_code=404, detail="Patient not found")
+    patient.updated_at = datetime.utcnow()
+    updated_patient = await db.replace(existing_patient, patient)
+    return updated_patient
 
 
-# Endpoint to get dynamic chart of age distribution for each clinic
-@router.get("/patients/visits/age-distribution")
-async def get_age_distribution_chart():
-    # Logic to generate dynamic chart of age distribution for each clinic
-    # Placeholder logic for generating chart
-    return {"message": "Dynamic chart of age distribution for each clinic"}
-
-
-# Other CRUD operations for patient visit records can be added as needed
-
-# Endpoint to perform other CRUD operations for patient visit records
-# For example: get_patient_visit, get_patient_visits, etc.
+@router.delete(
+    "/patients/{patient_id}", status_code=204, dependencies=[Depends(is_user_doctor)]
+)
+async def delete_patient(patient_id: str):
+    """Delete a patient record."""
+    patient = await Patient.find_one({"_id": patient_id})
+    if not patient:
+        raise HTTPException(status_code=404, detail="Patient not found")
+    await db.delete(patient)

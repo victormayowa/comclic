@@ -1,7 +1,7 @@
 """
 Pydantic Models for the API.
 """
-from datetime import datetime
+from datetime import datetime, date
 import re
 from typing import Any, List, Optional
 from beanie import Indexed
@@ -18,60 +18,8 @@ from pydantic import (
     AliasChoices,
 )
 from pydantic_core import PydanticCustomError
-from datetime import date
 from beanie import Document, before_event, Update
 
-class Clinic(str, Enum):
-    Okeila_CHC = "Okeila CHC"
-    Igbemo_CHC = "Igbemo CHC"
-    Infant_Welfare_Clinic = "Infant Welfare Clinic"
-    Staff_Clinic = "Staff Clinic"
-class PatientVisit(BaseModel):
-    name: str
-    age: int
-    gender: str
-    reason_for_visit: Optional[str]
-    complaint: str
-    date_of_visit: date
-    provisional_diagnosis: str
-    differential_diagnosis: Optional[str]
-    investigations: Optional[str]
-    treatment: str
-    referral: bool
-    clinic: List[Clinic]
-
-class Vaccine(str, Enum):
-    HBV = "HBV (Hepatitis B)"
-    BCG = "BCG (Bacillus Calmette-Guérin)"
-    OPV0 = "OPV0 (Oral Poliovirus Vaccine - Birth Dose)"
-    PENTA1 = "Penta1/Rota/PCV1 (First dose of Pentavalent vaccine combined with Rotavirus and Pneumococcal Conjugate Vaccine)"
-    PENTA2 = "Penta2/Rota/PCV2 (Second dose of Pentavalent vaccine combined with Rotavirus and Pneumococcal Conjugate Vaccine)"
-    PENTA3 = "Penta3/Rota/PCV3 (Third dose of Pentavalent vaccine combined with Rotavirus and Pneumococcal Conjugate Vaccine)"
-    IPV1 = "IPV1 (Inactivated Poliovirus Vaccine - First dose)"
-    IPV2 = "IPV2 (Inactivated Poliovirus Vaccine - Second dose)"
-    MEASLES1 = "Measles1 (First dose of Measles Vaccine)"
-    MEASLES2 = "Measles2 (Second dose of Measles Vaccine)"
-    YELLOW_FEVER = "Yellow Fever"
-    MENA = "MenA (Meningococcal A Vaccine)"
-    TETANUS1 = "Tetanus1 (First dose of Tetanus Vaccine)"
-    TETANUS2 = "Tetanus2 (Second dose of Tetanus Vaccine)"
-    TETANUS3 = "Tetanus3 (Third dose of Tetanus Vaccine)"
-    TETANUS4 = "Tetanus4 (Fourth dose of Tetanus Vaccine)"
-    TETANUS5 = "Tetanus5 (Fifth dose of Tetanus Vaccine)"
-class Immunization(BaseModel):
-    name: str
-    age: int
-    gender: str
-    vaccine_given: List[Vaccine]
-    date_of_vaccination: date
-class Finance(BaseModel):
-    record_officer: str
-    payment_type: str
-    daily_total_amount: float
-    reviewed_by_doctor: bool
-
-
-# User models for various
 
 class Base(Document):
     """Base model"""
@@ -96,6 +44,102 @@ class Base(Document):
     @before_event(Update)
     def save_update_at(self) -> None:
         self.updated_at = datetime.utcnow()
+
+
+class Clinic(str, Enum):
+    Okeila_CHC = "Okeila CHC"
+    Igbemo_CHC = "Igbemo CHC"
+    Infant_Welfare_Clinic = "Infant Welfare Clinic"
+    Staff_Clinic = "Staff Clinic"
+class Patient(Base):
+    name: str
+    age: int
+    gender: str
+    reason_for_visit: Optional[str]
+    complaint: str
+    date_of_visit: date
+    provisional_diagnosis: str
+    differential_diagnosis: Optional[str]
+    investigations: Optional[str]
+    treatment: str
+    referral: bool
+    clinic: List[Clinic]
+    entered_by: str
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "name": "John Doe",
+                "age": 30,
+                "gender": "Male",
+                "complaint": "Fever",
+                "date_of_visit": "2024-04-06",
+                "provisional_diagnosis": "Malaria",
+                "treatment": "Prescribed medication",
+                "referral": False,
+                "clinic": ["Okeila CHC"],
+            }
+        }
+
+class Vaccine(str, Enum):
+    HBV = "HBV (Hepatitis B)"
+    BCG = "BCG (Bacillus Calmette-Guérin)"
+    OPV0 = "OPV0 (Oral Poliovirus Vaccine - Birth Dose)"
+    PENTA1 = "Penta1/Rota/PCV1 (First dose of Pentavalent vaccine combined with Rotavirus and Pneumococcal Conjugate Vaccine)"
+    PENTA2 = "Penta2/Rota/PCV2 (Second dose of Pentavalent vaccine combined with Rotavirus and Pneumococcal Conjugate Vaccine)"
+    PENTA3 = "Penta3/Rota/PCV3 (Third dose of Pentavalent vaccine combined with Rotavirus and Pneumococcal Conjugate Vaccine)"
+    IPV1 = "IPV1 (Inactivated Poliovirus Vaccine - First dose)"
+    IPV2 = "IPV2 (Inactivated Poliovirus Vaccine - Second dose)"
+    MEASLES1 = "Measles1 (First dose of Measles Vaccine)"
+    MEASLES2 = "Measles2 (Second dose of Measles Vaccine)"
+    YELLOW_FEVER = "Yellow Fever"
+    MENA = "MenA (Meningococcal A Vaccine)"
+    TETANUS1 = "Tetanus1 (First dose of Tetanus Vaccine)"
+    TETANUS2 = "Tetanus2 (Second dose of Tetanus Vaccine)"
+    TETANUS3 = "Tetanus3 (Third dose of Tetanus Vaccine)"
+    TETANUS4 = "Tetanus4 (Fourth dose of Tetanus Vaccine)"
+    TETANUS5 = "Tetanus5 (Fifth dose of Tetanus Vaccine)"
+
+class Immunization(Base):
+    name: str
+    age: int
+    gender: str
+    vaccine_given: List[Vaccine]
+    date_of_vaccination: date
+    entered_by: str
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "name": "John Doe",
+                "age": 30,
+                "gender": "Male",
+                "vaccine_given": ["HBV", "BCG"],
+                "date_of_vaccination": "2024-04-06",
+                "entered_by": "Nurse Jane",
+            }
+        }
+
+class Finance(Base):
+    record_officer: str
+    payment_type: str
+    daily_total_amount: float
+    reviewed_by_doctor: bool
+    entered_by: str
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "record_officer": "Accountant Smith",
+                "payment_type": "DRF",
+                "daily_total_amount": 10000.0,
+                "reviewed_by_doctor": False,
+                "entered_by": "User123",
+            }
+        }
+
+
+# User models for various
 
 class Roles(str, Enum):
     DR = "Doctor"
@@ -127,6 +171,16 @@ class User(Base):
             "id": str(self.id),
         }
 
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "username": "user123",
+                "email": "user@example.com",
+                "password": "securepassword",
+                "roles": ["Doctor"],
+            }
+        }
+
     class Settings:
         name = "users"
 
@@ -142,7 +196,7 @@ class UserBase(BaseModel):
     def validate_username(cls, v: str):
         """validates username"""
 
-        USERNAME_REGEX = "^[A-Za-z][A-Za-z0-9]{4,10}$"
+        USERNAME_REGEX = r"^[A-Za-z][A-Za-z0-9]{4,10}$"
         matches = re.fullmatch(USERNAME_REGEX, v)
 
         if matches is None:
@@ -160,8 +214,8 @@ class UserBase(BaseModel):
         """validates password"""
 
         PASSWD_REGEX = (
-            "^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)"  # noqa: W605
-            "[A-Za-z\d\.+-=#_%|&@]{7,16}$"
+            r"^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)"  # noqa: W605
+            r"[A-Za-z\d\.+-=#_%|&@]{7,16}$"
         )  # noqa: W605
         if not re.fullmatch(PASSWD_REGEX, v):
             raise PydanticCustomError(

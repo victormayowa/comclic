@@ -1,60 +1,64 @@
-from typing import List, Optional
-from fastapi import APIRouter, HTTPException, Depends
-from motor.motor_asyncio import AsyncIOMotorClient
-from datetime import datetime
-from pydantic import BaseModel
+from fastapi import APIRouter, Depends, HTTPException
+from datetime import date, datetime
+from typing import List
 
-from app.database import get_database
-from app.models import Immunization
+from app.models import Immunization, User, Roles
+from app.database import db
 
 router = APIRouter()
 
 
-# Define Pydantic models for request and response
-class ImmunizationIn(BaseModel):
-    name: str
-    age: int
-    gender: str
-    vaccine_given: str
-    date_of_vaccination: datetime
+async def get_current_user(username: str = Depends(User)):
+    """Dependency to get the current user."""
+    return username
 
 
-class ImmunizationOut(BaseModel):
-    id: str
-    name: str
-    age: int
-    gender: str
-    vaccine_given: str
-    date_of_vaccination: datetime
+async def is_user_accountant(current_user: User = Depends(get_current_user)):
+    """Dependency to check if the current user is an accountant."""
+    if Roles.AC in current_user.roles:
+        raise HTTPException(
+            status_code=403, detail="Forbidden: Accountants are not allowed"
+        )
 
 
-# Endpoint to add immunization record
-@router.post("/immunization/", response_model=ImmunizationOut)
-async def add_immunization_record(
-    immunization: ImmunizationIn, db: AsyncIOMotorClient = Depends(get_database)
-):
-    immunization_doc = immunization.dict()
-    collection = db["immunizations"]
-    result = await collection.insert_one(immunization_doc)
-    inserted_immunization = await collection.find_one({"_id": result.inserted_id})
-    return ImmunizationOut(**inserted_immunization)
+@router.post(
+    "/immunizations",
+    response_model=Immunization,
+    status_code=201,
+    dependencies=[Depends(is_user_accountant)],
+)
+async def create_immunization(immunization: Immunization):
+    """Create a new immunization record."""
+    new_immunization = await db.save(immunization)
+    return new_immunization
 
 
-# Endpoint to get all immunization records
-@router.get("/immunization/", response_model=List[ImmunizationOut])
-async def get_immunization_records(db: AsyncIOMotorClient = Depends(get_database)):
-    collection = db["immunizations"]
-    immunization_records = await collection.find({}).to_list(1000)
-    return [ImmunizationOut(**record) for record in immunization_records]
+@router.get("/immunizations", response_model=List[Immunization])
+async def list_immunizations():
+    """Retrieve a list of immunizations."""
+    immunizations = await Immunization.find_all()
+    return immunizations
 
 
-# Endpoint to get immunization record by ID
-@router.get("/immunization/{immunization_id}", response_model=ImmunizationOut)
-async def get_immunization_record(
-    immunization_id: str, db: AsyncIOMotorClient = Depends(get_database)
-):
-    collection = db["immunizations"]
-    immunization_record = await collection.find_one({"_id": immunization_id})
-    if immunization_record:
-        return ImmunizationOut(**immunization_record)
-    raise HTTPException(status_code=404, detail="Immunization record not found")
+@router.get("/immunizations/{immunization_id}", response_model=Immunization)
+async def get_immunization(immunization_id: str):
+    """Retrieve a specific immunization record by ID."""
+    immunization = await Immunization.find_one({"_id": immunization_id})
+    if not immunization:
+        raise HTTPException(status_code=404, detail="Immunization not found")
+    return immunization
+
+
+@router.put(
+    "/immunizations/{immunization_id}",
+    response_model=Immunization,
+    dependencies=[Depends(is_user_accountant)],
+)
+async def update_immunization(immunization_id: str, immunization: Immunization):
+    """Update an existing immunization record."""
+    existing_immunization = await Immunization.find_one({"_id": immunization_id})
+    if not existing_immunization:
+        raise HTTPException(status_code=404, detail="Immunization not found")
+    immunization.updated_at = datetime.utcnow()
+    updated_immunization = await db.replace(existing_immunization, immunization)
+    return updated_immunization

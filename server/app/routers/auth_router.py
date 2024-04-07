@@ -9,8 +9,8 @@ from fastapi import APIRouter, Form, Depends
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import HTTPException
 
-from app.models.user import User
-from app.db import SESSION_CACHE
+from app.models import User
+#from app.db import SESSION_CACHE
 from app.models import UserLogin, UserRegister, ResponseModel
 from app.middlewares.auth import register_user, authenticate, login_user
 
@@ -73,7 +73,7 @@ async def is_authenticated(
 async def logout(user: User = Depends(authenticate)) -> ResponseModel:
     """logs out a user"""
 
-    SESSION_CACHE.delete(str(user.id))
+    #SESSION_CACHE.delete(str(user.id))
 
     return ResponseModel(
         message="logged out successfully",
