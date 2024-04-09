@@ -6,7 +6,7 @@ import re
 from typing import Any, List, Optional
 from beanie import Indexed
 import pymongo
-from enum import Enum
+from pydantic.types import Enum
 
 from pydantic import (
     BaseModel,
@@ -46,7 +46,7 @@ class Base(Document):
         self.updated_at = datetime.utcnow()
 
 
-class Clinic(str, Enum):
+class Clinic(Enum):
     Okeila_CHC = "Okeila CHC"
     Igbemo_CHC = "Igbemo CHC"
     Infant_Welfare_Clinic = "Infant Welfare Clinic"
@@ -81,7 +81,7 @@ class Patient(Base):
             }
         }
 
-class Vaccine(str, Enum):
+class Vaccine(Enum):
     HBV = "HBV (Hepatitis B)"
     BCG = "BCG (Bacillus Calmette-Guérin)"
     OPV0 = "OPV0 (Oral Poliovirus Vaccine - Birth Dose)"
@@ -141,7 +141,7 @@ class Finance(Base):
 
 # User models for various
 
-class Roles(str, Enum):
+class Roles(Enum):
     DR = "Doctor"
     NR = "Nurse"
     AC = "Accountant"
@@ -154,7 +154,7 @@ class User(Base):
     username: str = Indexed(str, unique=True, index_type=pymongo.TEXT)
     email: str = Indexed(str, unique=True, index_type=pymongo.TEXT)
     password: str
-    roles: List[Roles]
+    role: List[Roles]
     reset_token: str | None = None
 
     @model_serializer
@@ -170,16 +170,19 @@ class User(Base):
             "email": self.email,
             "id": str(self.id),
         }
+    @classmethod
+    async def find_by_username(cls, username: str):
+        return await cls.find_one(cls.username == username)
 
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "username": "user123",
-                "email": "user@example.com",
-                "password": "securepassword",
-                "roles": ["Doctor"],
-            }
-        }
+    # class Config:
+    #     json_schema_extra = {
+    #         "example": {
+    #             "username": "user123",
+    #             "email": "user@example.com",
+    #             "password": "securepassword",
+    #             "roles": ["Doctor"],
+    #         }
+    #     }
 
     class Settings:
         name = "users"

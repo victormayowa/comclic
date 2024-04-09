@@ -11,7 +11,7 @@ from fastapi.exceptions import HTTPException
 
 from app.models import User
 #from app.db import SESSION_CACHE
-from app.models import UserLogin, UserRegister, ResponseModel
+from app.models import UserLogin, UserRegister, ResponseModel, User
 from app.middlewares.auth import register_user, authenticate, login_user
 
 
@@ -28,8 +28,9 @@ async def register(user: UserRegister) -> ResponseModel:
     username = user.username
     email = user.email
     passwd = user.password
+    role = user.role
 
-    user = await register_user(email, username, passwd)
+    user = await register_user(email, username, passwd, role)
 
     return ResponseModel(
         message="user registered successfully",

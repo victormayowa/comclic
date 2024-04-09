@@ -14,7 +14,6 @@ from app.utils import create_passwd_hash, verify_passwd
 from app.settings import settings
 
 
-
 JWT = JwtAccessCookie(
     secret_key=settings.SECRET_KEY,
     auto_error=True,
@@ -40,7 +39,7 @@ async def authenticate(
 
 
 async def register_user(
-    email: str, username: str, passwd: str, roles: List[str]
+    email: str, username: str, passwd: str, role: List[Roles]
 ) -> User:
     """creates a new user"""
     if await User.find_one(User.username == username):
@@ -50,7 +49,7 @@ async def register_user(
         raise HTTPException(status_code=409, detail="email already exists")
 
     new_user = User(
-        username=username, email=email, password=create_passwd_hash(passwd), roles=roles
+        username=username, email=email, password=create_passwd_hash(passwd), role=role
     )
 
     try:
