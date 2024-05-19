@@ -1,9 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException
-from datetime import date, datetime
+from datetime import datetime
 from typing import List
 
 from app.models import Patient, User, Roles
-from app.database import db
 
 router = APIRouter()
 
@@ -15,8 +14,9 @@ async def get_current_user(username: str = Depends(User)):
 
 async def is_user_doctor(current_user: User = Depends(get_current_user)):
     """Dependency to check if the current user is a doctor."""
-    if Roles.DR not in current_user.roles:
+    if Roles.DR not in current_user.role:
         raise HTTPException(status_code=403, detail="Forbidden: User is not a doctor")
+    return
 
 
 @router.post(
@@ -27,12 +27,12 @@ async def is_user_doctor(current_user: User = Depends(get_current_user)):
 )
 async def create_patient(patient: Patient):
     """Create a new patient record."""
-    new_patient = await db.save(patient)
+    new_patient = await Patient.save(patient)
     return new_patient
 
-
 @router.get(
-    "/patients", response_model=List[Patient], dependencies=[Depends(is_user_doctor)]
+    "/patients", response_model=List[Patient], 
+    dependencies=[Depends(is_user_doctor)]
 )
 async def list_patients():
     """Retrieve a list of patients."""
@@ -64,16 +64,17 @@ async def update_patient(patient_id: str, patient: Patient):
     if not existing_patient:
         raise HTTPException(status_code=404, detail="Patient not found")
     patient.updated_at = datetime.utcnow()
-    updated_patient = await db.replace(existing_patient, patient)
+    updated_patient = await Patient.replace(existing_patient, patient)
     return updated_patient
 
 
 @router.delete(
-    "/patients/{patient_id}", status_code=204, dependencies=[Depends(is_user_doctor)]
+    "/patients/{patient_id}", status_code=204, 
+    dependencies=[Depends(is_user_doctor)]
 )
 async def delete_patient(patient_id: str):
     """Delete a patient record."""
     patient = await Patient.find_one({"_id": patient_id})
     if not patient:
         raise HTTPException(status_code=404, detail="Patient not found")
-    await db.delete(patient)
+    await Patient.delete(patient)

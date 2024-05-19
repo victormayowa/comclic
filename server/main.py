@@ -1,7 +1,8 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from app.routers import patient, immunization, finance, auth_router
-from app.database import init_db, get_mongo_uri, db
+from app.database import init_db #get_mongo_uri, db
+from app.settings import settings
 from fastapi.middleware.cors import CORSMiddleware
 
 ORIGINS = [
@@ -14,14 +15,14 @@ ORIGINS = [
 async def lifecycle(app: FastAPI):
     """app lifecycle"""
     # logger.info('starting app')
-    await db
+    await init_db(settings.DATABASE_URL)
     yield
     # logger.info('stopping app')
 
 
 def create_app() -> FastAPI:
     """app factory function"""
-    app = FastAPI()
+    app = FastAPI(lifespan=lifecycle)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=ORIGINS,
@@ -29,7 +30,7 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
-    
+
     app.include_router(auth_router.auth_router)
     app.include_router(patient.router)
     app.include_router(immunization.router)
@@ -42,3 +43,7 @@ def create_app() -> FastAPI:
     return app
 
 app = create_app()
+if __name__ == "__main__":
+    import uvicorn
+    # uvicorn.run("main:app", host=HOST, port=PORT, reload=RELOAD)
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

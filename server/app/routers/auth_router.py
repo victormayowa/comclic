@@ -4,12 +4,9 @@ authentication endpoints
 
 from secrets import token_hex
 from typing import Annotated
-
 from fastapi import APIRouter, Form, Depends
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import HTTPException
-
-from app.models import User
 #from app.db import SESSION_CACHE
 from app.models import UserLogin, UserRegister, ResponseModel, User
 from app.middlewares.auth import register_user, authenticate, login_user
@@ -53,7 +50,7 @@ async def login(
     return ResponseModel(
         message="login successful",
         status_code=200,
-        data=user.model_dump(),
+        data=user.model_dump()
     )
 
 
@@ -110,7 +107,6 @@ async def get_reset_token(
         message="reset token generated successfully",
         status_code=200,
     )
-
 
 # TODO: Once user confirms through email and a reset token is created,
 # the token is used to access this endpoint that will reset the password

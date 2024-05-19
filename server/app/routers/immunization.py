@@ -1,9 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException
-from datetime import date, datetime
+from datetime import datetime
 from typing import List
 
 from app.models import Immunization, User, Roles
-from app.database import db
 
 router = APIRouter()
 
@@ -29,7 +28,7 @@ async def is_user_accountant(current_user: User = Depends(get_current_user)):
 )
 async def create_immunization(immunization: Immunization):
     """Create a new immunization record."""
-    new_immunization = await db.save(immunization)
+    new_immunization = await Immunization.save(immunization)
     return new_immunization
 
 
@@ -60,5 +59,5 @@ async def update_immunization(immunization_id: str, immunization: Immunization):
     if not existing_immunization:
         raise HTTPException(status_code=404, detail="Immunization not found")
     immunization.updated_at = datetime.utcnow()
-    updated_immunization = await db.replace(existing_immunization, immunization)
+    updated_immunization = await Immunization.replace(existing_immunization, immunization)
     return updated_immunization

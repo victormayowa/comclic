@@ -1,8 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from typing import List
-
+from datetime import datetime 
 from app.models import Finance, User, Roles
-from app.database import db
 
 router = APIRouter()
 
@@ -37,7 +36,7 @@ async def is_user_doctor(current_user: User = Depends(get_current_user)):
 )
 async def create_financial_record(finance: Finance):
     """Create a new financial record."""
-    new_finance = await db.save(finance)
+    new_finance = await Finance.save(finance)
     return new_finance
 
 
@@ -77,5 +76,5 @@ async def update_financial_record(
         )
 
     finance.updated_at = datetime.utcnow()
-    updated_finance = await db.replace(existing_finance, finance)
+    updated_finance = await Finance.replace(existing_finance, finance)
     return updated_finance

@@ -3,7 +3,7 @@ Pydantic Models for the API.
 """
 from datetime import datetime, date
 import re
-from typing import Any, List, Optional
+from typing import List, Optional
 from beanie import Indexed
 import pymongo
 from pydantic.types import Enum
@@ -52,6 +52,7 @@ class Clinic(Enum):
     Infant_Welfare_Clinic = "Infant Welfare Clinic"
     Staff_Clinic = "Staff Clinic"
 class Patient(Base):
+    hospital_no: str
     name: str
     age: int
     gender: str
@@ -69,15 +70,20 @@ class Patient(Base):
     class Config:
         json_schema_extra = {
             "example": {
+                "hospital_no": "01/05/24",
                 "name": "John Doe",
                 "age": 30,
                 "gender": "Male",
                 "complaint": "Fever",
+                "reason_for_visit": "hfollow uop",
                 "date_of_visit": "2024-04-06",
                 "provisional_diagnosis": "Malaria",
+                "differential_diagnosis" : "Optional[str]",
                 "treatment": "Prescribed medication",
+                "investigations": "MP",
                 "referral": False,
                 "clinic": ["Okeila CHC"],
+                "entered_by": "string",
             }
         }
 
@@ -152,7 +158,7 @@ class User(Base):
     """
 
     username: str = Indexed(str, unique=True, index_type=pymongo.TEXT)
-    email: str = Indexed(str, unique=True, index_type=pymongo.TEXT)
+    email: EmailStr = Indexed(str, unique=True, index_type=pymongo.TEXT)
     password: str
     role: List[Roles]
     reset_token: str | None = None
@@ -168,21 +174,21 @@ class User(Base):
         return {
             "username": self.username,
             "email": self.email,
+            "role": self.role,
             "id": str(self.id),
         }
-    @classmethod
-    async def find_by_username(cls, username: str):
-        return await cls.find_one(cls.username == username)
 
-    # class Config:
-    #     json_schema_extra = {
-    #         "example": {
-    #             "username": "user123",
-    #             "email": "user@example.com",
-    #             "password": "securepassword",
-    #             "roles": ["Doctor"],
-    #         }
-    #     }
+    class Config:
+        populate_by_name = True
+        arbitrary_types_allowed = True
+        json_schema_extra = {
+            "example": {
+                "username": "user123",
+                "email": "user@example.com",
+                "password": "securepassword",
+                "roles": ["Doctor"],
+            }
+        }
 
     class Settings:
         name = "users"

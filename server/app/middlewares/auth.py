@@ -54,7 +54,7 @@ async def register_user(
 
     try:
         await new_user.insert()
-    except Exception as err:
+    except Exception:
         raise HTTPException(status_code=500, detail="user registration failed")
 
     return new_user
@@ -98,3 +98,14 @@ async def login_user(
     # SESSION_CACHE.setex(str(user.id), token)
 
     return user
+
+
+# def decode_access_token(token: str):
+#     try:
+#         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+#         username: str = payload.get("sub")
+#         if username is None:
+#             raise HTTPException(status_code=401, detail="Invalid token")
+#         return payload
+#     except JWTError:
+#         raise HTTPException(status_code=401, detail="Invalid token")
