@@ -21,6 +21,11 @@ from pydantic_core import PydanticCustomError
 from beanie import Document, before_event, Update
 
 
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+
 class Base(Document):
     """Base model"""
 

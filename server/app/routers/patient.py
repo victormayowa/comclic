@@ -2,21 +2,23 @@ from fastapi import APIRouter, Depends, HTTPException
 from datetime import datetime
 from typing import List
 
-from app.models import Patient, User, Roles
+from app.models import Patient
+from app.middlewares.authware import is_user_doctor
+
 
 router = APIRouter()
 
 
-async def get_current_user(username: str = Depends(User)):
-    """Dependency to get the current user."""
-    return username
+# async def get_current_user(username: str = Depends(User)):
+#     """Dependency to get the current user."""
+#     return username
 
 
-async def is_user_doctor(current_user: User = Depends(get_current_user)):
-    """Dependency to check if the current user is a doctor."""
-    if Roles.DR not in current_user.role:
-        raise HTTPException(status_code=403, detail="Forbidden: User is not a doctor")
-    return
+# async def is_user_doctor(current_user: User = Depends(get_current_user)):
+#     """Dependency to check if the current user is a doctor."""
+#     if Roles.DR not in current_user.role:
+#         raise HTTPException(status_code=403, detail="Forbidden: User is not a doctor")
+#     return
 
 
 @router.post(
