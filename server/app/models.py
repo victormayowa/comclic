@@ -131,9 +131,19 @@ class Immunization(Base):
             }
         }
 
+
+class Source(Enum):
+    DRF = "Drug Revolving Fund"
+    SS = "Surgical Service"
+    LS = "Laboratory/Radiological Service"
+    NR = "New Registration/Booking Service"
+    FR = "Folder retrieval"
+
+
 class Finance(Base):
     record_officer: str
     payment_type: str
+    source: List[Source]
     daily_total_amount: float
     reviewed_by_doctor: bool
     entered_by: str
@@ -144,6 +154,7 @@ class Finance(Base):
                 "record_officer": "Accountant Smith",
                 "payment_type": "DRF",
                 "daily_total_amount": 10000.0,
+                "source" : ["DRF"],
                 "reviewed_by_doctor": False,
                 "entered_by": "User123",
             }

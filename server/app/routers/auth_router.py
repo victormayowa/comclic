@@ -8,7 +8,7 @@ from fastapi import APIRouter, Form, Depends
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import HTTPException
 # from app.db import SESSION_CACHE
-from app.models import UserRegister, ResponseModel, User
+from app.models import UserRegister, ResponseModel, User, Token
 from app.middlewares.auth import register_user, authenticate
 from app.middlewares.authware import create_access_token, ACCESS_TOKEN_EXPIRE_MINUTES
 from fastapi.security import OAuth2PasswordRequestForm
@@ -42,8 +42,9 @@ async def register(user: UserRegister) -> ResponseModel:
     )
 
 
-@auth_router.post("/login", status_code=200)
-async def login_user(form_data: OAuth2PasswordRequestForm = Depends()) -> User:
+@auth_router.post("/token", response_model=Token)
+#@auth_router.post("/login", status_code=200)
+async def login_user(form_data: OAuth2PasswordRequestForm = Depends()) -> Token:
     """logs in a user"""
 
     if not form_data.username or not form_data.password:

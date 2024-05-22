@@ -2,37 +2,15 @@ from fastapi import APIRouter, Depends, HTTPException
 from typing import List
 from datetime import datetime 
 from app.models import Finance, User, Roles
+from app.middlewares.authware import is_doctor_or_accountant, get_current_user, is_user_doctor
 
 router = APIRouter()
-
-
-async def get_current_user(username: str = Depends(User)):
-    """Dependency to get the current user."""
-    return await username
-
-
-async def is_user_accountant(current_user: User = Depends(get_current_user)):
-    """Dependency to check if the current user is an accountant."""
-    if Roles.AC not in current_user.roles:
-        raise HTTPException(
-            status_code=403, detail="Forbidden: Only accountants are allowed"
-        )
-
-
-async def is_user_doctor(current_user: User = Depends(get_current_user)):
-    """Dependency to check if the current user is a doctor."""
-    if Roles.DR not in await current_user.roles:
-        raise HTTPException(
-            status_code=403,
-            detail="Forbidden: Only doctors are allowed to review financial records",
-        )
-
 
 @router.post(
     "/financial-records",
     response_model=Finance,
     status_code=201,
-    dependencies=[Depends(is_user_accountant)],
+    dependencies=[Depends(is_doctor_or_accountant)],
 )
 async def create_financial_record(finance: Finance):
     """Create a new financial record."""
@@ -59,7 +37,7 @@ async def get_financial_record(record_id: str):
 @router.put(
     "/financial-records/{record_id}",
     response_model=Finance,
-    dependencies=[Depends(is_user_accountant)],
+    dependencies=[Depends(is_doctor_or_accountant)],
 )
 async def update_financial_record(
     record_id: str, finance: Finance, current_user: User = Depends(get_current_user)
@@ -78,3 +56,16 @@ async def update_financial_record(
     finance.updated_at = datetime.utcnow()
     updated_finance = await Finance.replace(existing_finance, finance)
     return updated_finance
+
+
+@router.delete(
+    "/financial-records/{record_id}",
+    status_code=204,
+    dependencies=[Depends(is_user_doctor)],
+)
+async def delete_financial_record(record_id: str):
+    """Delete a financial record."""
+    financial_record = await Finance.get(record_id)
+    if not financial_record:
+        raise HTTPException(status_code=404, detail="Financial record not found")
+    await financial_record.delete()

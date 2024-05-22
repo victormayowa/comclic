@@ -11,7 +11,7 @@ from app.settings import settings
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/token")
 
 
 async def get_user(username: str) -> Optional[User]:
@@ -40,11 +40,10 @@ def decode_access_token(token: str):
         raise HTTPException(status_code=401, detail="Invalid token")
 
 
-
-
 async def get_current_user(token: str = Depends(oauth2_scheme)) -> User:
     payload = decode_access_token(token)
     username: str = payload.get("sub")
+    #print(username)
     user = await get_user(username)
     if not user:
         raise HTTPException(status_code=401, detail="Invalid token")
@@ -52,6 +51,38 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> User:
 
 
 async def is_user_doctor(current_user: User = Depends(get_current_user)):
-    if "DR" not in current_user.roles:
+    user_roles = [role.value for role in current_user.role]
+    print(user_roles)
+    if "Doctor" not in user_roles:
         raise HTTPException(status_code=403, detail="Forbidden: User is not a doctor")
+    return current_user
+
+
+async def is_doctor_or_accountant(current_user: User = Depends(get_current_user)):
+    user_roles = [role.value for role in current_user.role]
+    print(user_roles)
+    if "Doctor" not in user_roles and "Accountant" not in user_roles:
+        raise HTTPException(
+            status_code=403, detail="Forbidden: User is not a doctor or accountant"
+        )
+    return current_user
+
+
+async def is_chew(current_user: User = Depends(get_current_user)):
+    user_roles = [role.value for role in current_user.role]
+    if "CHEW/RI/others" not in user_roles:
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden: User is not authorized to add/update immunization records",
+        )
+    return current_user
+
+
+async def is_nurse_or_doctor(current_user: User = Depends(get_current_user)):
+    user_roles = [role.value for role in current_user.role]
+    if "Nurse" not in user_roles and "Doctor" not in user_roles:
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden: User is not authorized to delete immunization records",
+        )
     return current_user

@@ -3,28 +3,15 @@ from datetime import datetime
 from typing import List
 
 from app.models import Immunization, User, Roles
+from app.middlewares.authware import is_user_doctor, is_chew, is_nurse_or_doctor, get_current_user
 
 router = APIRouter()
-
-
-async def get_current_user(username: str = Depends(User)):
-    """Dependency to get the current user."""
-    return username
-
-
-async def is_user_accountant(current_user: User = Depends(get_current_user)):
-    """Dependency to check if the current user is an accountant."""
-    if Roles.AC in current_user.roles:
-        raise HTTPException(
-            status_code=403, detail="Forbidden: Accountants are not allowed"
-        )
-
 
 @router.post(
     "/immunizations",
     response_model=Immunization,
     status_code=201,
-    dependencies=[Depends(is_user_accountant)],
+    dependencies=[Depends(is_chew)],
 )
 async def create_immunization(immunization: Immunization):
     """Create a new immunization record."""
@@ -36,6 +23,8 @@ async def create_immunization(immunization: Immunization):
 async def list_immunizations():
     """Retrieve a list of immunizations."""
     immunizations = await Immunization.find_all()
+    if not immunizations:
+        raise HTTPException(status_code=404, detail="Immunization not found")
     return immunizations
 
 
@@ -51,7 +40,7 @@ async def get_immunization(immunization_id: str):
 @router.put(
     "/immunizations/{immunization_id}",
     response_model=Immunization,
-    dependencies=[Depends(is_user_accountant)],
+    dependencies=[Depends(is_chew)],
 )
 async def update_immunization(immunization_id: str, immunization: Immunization):
     """Update an existing immunization record."""
@@ -61,3 +50,16 @@ async def update_immunization(immunization_id: str, immunization: Immunization):
     immunization.updated_at = datetime.utcnow()
     updated_immunization = await Immunization.replace(existing_immunization, immunization)
     return updated_immunization
+
+
+@router.delete(
+    "/immunizations/{immunization_id}",
+    status_code=204,
+    dependencies=[Depends(is_nurse_or_doctor)],
+)
+async def delete_immunization(immunization_id: str):
+    """Delete an immunization record."""
+    immunization = await Immunization.get(immunization_id)
+    if not immunization:
+        raise HTTPException(status_code=404, detail="Immunization not found")
+    await immunization.delete()
