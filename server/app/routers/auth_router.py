@@ -1,22 +1,15 @@
 """
 authentication endpoints
 """
-from datetime import timedelta
 from secrets import token_hex
 from typing import Annotated
 from fastapi import APIRouter, Form, Depends
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import HTTPException
+
 # from app.db import SESSION_CACHE
-from app.models import UserRegister, ResponseModel, User, Token
-from app.middlewares.auth import register_user, authenticate
-from app.middlewares.authware import create_access_token, ACCESS_TOKEN_EXPIRE_MINUTES
-from fastapi.security import OAuth2PasswordRequestForm
-
-
-from beanie.operators import Or
-
-from app.utils import verify_passwd
+from app.models import UserRegister, ResponseModel, User, UserLogin
+from app.middlewares.auth import register_user, authenticate, login_user
 
 
 auth_router = APIRouter(
@@ -42,29 +35,45 @@ async def register(user: UserRegister) -> ResponseModel:
     )
 
 
-@auth_router.post("/token", response_model=Token)
-#@auth_router.post("/login", status_code=200)
-async def login_user(form_data: OAuth2PasswordRequestForm = Depends()) -> Token:
+# @auth_router.post("/token", response_model=Token)
+# #@auth_router.post("/login", status_code=200)
+# async def login_user(form_data: OAuth2PasswordRequestForm = Depends()) -> Token:
+#     """logs in a user"""
+
+#     if not form_data.username or not form_data.password:
+#         raise HTTPException(status_code=400, detail="missing credentials")
+
+#     user = await User.find_one(
+#         Or(User.email == form_data.username, User.username == form_data.username)
+#     )
+
+#     if not user:
+#         raise HTTPException(status_code=404, detail="invalid username or email")
+
+#     if not verify_passwd(form_data.password, user.password):
+#         raise HTTPException(status_code=401, detail="invalid password")
+
+#     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+#     access_token = create_access_token(
+#         data={"sub": user.username}, expires_delta=access_token_expires
+#     )
+#     return {"access_token": access_token, "token_type": "bearer"}
+
+
+@auth_router.post("/login", status_code=200)
+async def login(credentials: UserLogin, response: JSONResponse) -> ResponseModel:
     """logs in a user"""
 
-    if not form_data.username or not form_data.password:
-        raise HTTPException(status_code=400, detail="missing credentials")
+    login_id = credentials.username or credentials.email
+    password = credentials.password
 
-    user = await User.find_one(
-        Or(User.email == form_data.username, User.username == form_data.username)
+    user = await login_user(login_id, password, response)
+
+    return ResponseModel(
+        message="login successful",
+        status_code=200,
+        data=user.model_dump(),
     )
-
-    if not user:
-        raise HTTPException(status_code=404, detail="invalid username or email")
-
-    if not verify_passwd(form_data.password, user.password):
-        raise HTTPException(status_code=401, detail="invalid password")
-
-    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = create_access_token(
-        data={"sub": user.username}, expires_delta=access_token_expires
-    )
-    return {"access_token": access_token, "token_type": "bearer"}
 
 
 @auth_router.get("/is_authenticated")

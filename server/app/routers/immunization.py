@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import List
 
 from app.models import Immunization, User, Roles
-from app.middlewares.authware import is_user_doctor, is_chew, is_nurse_or_doctor, get_current_user
+from app.middlewares.auth import is_user_doctor, is_chew, is_nurse_or_doctor
 
 router = APIRouter()
 

@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import List
 
 from app.models import Patient
-from app.middlewares.authware import is_user_doctor
+from app.middlewares.auth import is_user_doctor
 
 
 router = APIRouter()

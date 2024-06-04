@@ -3,7 +3,7 @@ Pydantic Models for the API.
 """
 from datetime import datetime, date
 import re
-from typing import List, Optional
+from typing import Optional, NamedTuple
 from beanie import Indexed
 import pymongo
 from pydantic.types import Enum
@@ -25,6 +25,9 @@ class Token(BaseModel):
     access_token: str
     token_type: str
 
+class Perm(NamedTuple):
+    user: "User"
+    authorized: bool
 
 class Base(Document):
     """Base model"""
@@ -69,7 +72,7 @@ class Patient(Base):
     investigations: Optional[str]
     treatment: str
     referral: bool
-    clinic: List[Clinic]
+    clinic: list[Clinic]
     entered_by: str
 
     class Config:
@@ -115,7 +118,7 @@ class Immunization(Base):
     name: str
     age: int
     gender: str
-    vaccine_given: List[Vaccine]
+    vaccine_given: list[Vaccine]
     date_of_vaccination: date
     entered_by: str
 
@@ -143,7 +146,7 @@ class Source(Enum):
 class Finance(Base):
     record_officer: str
     payment_type: str
-    source: List[Source]
+    source: list[Source]
     daily_total_amount: float
     reviewed_by_doctor: bool
     entered_by: str
@@ -176,7 +179,7 @@ class User(Base):
     username: str = Indexed(str, unique=True, index_type=pymongo.TEXT)
     email: EmailStr = Indexed(str, unique=True, index_type=pymongo.TEXT)
     password: str
-    role: List[Roles]
+    role: list[Roles]
     reset_token: str | None = None
 
     @model_serializer
@@ -258,7 +261,7 @@ class UserRegister(UserBase):
     username: str
     email: EmailStr
     password: str
-    role: List[Roles] = Field(..., description="User roles")
+    role: list[Roles] = Field(..., description="User roles")
 class UserLogin(UserBase):
     """user input schema"""
 

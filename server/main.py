@@ -1,8 +1,8 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
+from app.settings import settings
 from app.routers import patient, immunization, finance, auth_router
 from app.database import init_db #get_mongo_uri, db
-from app.settings import settings
 from fastapi.middleware.cors import CORSMiddleware
 
 ORIGINS = [
@@ -22,7 +22,11 @@ async def lifecycle(app: FastAPI):
 
 def create_app() -> FastAPI:
     """app factory function"""
-    app = FastAPI(lifespan=lifecycle)
+    app = FastAPI(
+        title="Comclic API",
+        lifespan=lifecycle,
+    )
+
     app.add_middleware(
         CORSMiddleware,
         allow_origins=ORIGINS,

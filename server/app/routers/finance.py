@@ -2,7 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from typing import List
 from datetime import datetime 
 from app.models import Finance, User, Roles
-from app.middlewares.authware import is_doctor_or_accountant, get_current_user, is_user_doctor
+from app.middlewares.auth import is_doctor_or_accountant, is_user_doctor
+from app.middlewares.auth import authenticate
 
 router = APIRouter()
 
@@ -18,14 +19,14 @@ async def create_financial_record(finance: Finance):
     return new_finance
 
 
-@router.get("/financial-records", response_model=List[Finance])
+@router.get("/financial-records", response_model=List[Finance], dependencies=[Depends(authenticate)])
 async def list_financial_records():
     """Retrieve a list of financial records."""
     financial_records = await Finance.find_all()
     return financial_records
 
 
-@router.get("/financial-records/{record_id}", response_model=Finance)
+@router.get("/financial-records/{record_id}", response_model=Finance, dependencies=[Depends(authenticate)])
 async def get_financial_record(record_id: str):
     """Retrieve a specific financial record by ID."""
     financial_record = await Finance.find_one({"_id": record_id})
@@ -37,10 +38,9 @@ async def get_financial_record(record_id: str):
 @router.put(
     "/financial-records/{record_id}",
     response_model=Finance,
-    dependencies=[Depends(is_doctor_or_accountant)],
 )
 async def update_financial_record(
-    record_id: str, finance: Finance, current_user: User = Depends(get_current_user)
+    record_id: str, finance: Finance, current_user: User = Depends(is_doctor_or_accountant)
 ):
     """Update an existing financial record."""
     existing_finance = await Finance.find_one({"_id": record_id})
