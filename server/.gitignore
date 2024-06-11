@@ -2,3 +2,5 @@ envreal
 .env
 __pycache__
 .venv
+~
+.vscode

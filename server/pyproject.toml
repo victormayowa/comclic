@@ -18,9 +18,13 @@ python-jose = {extras = ["cryptography"], version = "^3.3.0"}
 passlib = {extras = ["bycrypt"], version = "^1.7.4"}
 python-multipart = "^0.0.9"
 fastapi-jwt = {extras = ["authlib"], version = "^0.3.0"}
+redis = {extras = ["hiredis"], version = "^5.0.5"}
+
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.4.7"
 
 [tool.ruff]
-line-length = 120
+line-length = 89
 indent-width = 4
 target-version = "py312"
 

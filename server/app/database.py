@@ -5,25 +5,13 @@ Defines the storage engine.
 from motor.motor_asyncio import AsyncIOMotorClient
 from beanie import init_beanie
 
-from app.models import (
-    User,
-    Patient,
-    Immunization,
-    Finance
-)
+from app.models import User, Patient, Immunization, Finance
 
 from app.settings import settings
+from redis import Redis, asyncio as aioredis
+from redis.retry import Retry
+from redis.backoff import ExponentialBackoff
 
-
-# def get_mongo_uri() -> str:
-#     """returns the mongo uri"""
-#     if settings.DB_USER and settings.DB_PASSWD:
-#         return (
-#             f"mongodb://{settings.DB_USER}:{settings.DB_PASSWD}"
-#             f"@{settings.DB_HOST}:{settings.DB_PORT}/{settings.DB_NAME}"
-#         )
-
-#     return f"{settings.DATABASE_URL}"  # mongodb://{settings.DB_HOST}:{settings.DB_PORT}/" f"{settings.DB_NAME}"
 
 async def init_db(uri: str) -> None:
     """
@@ -33,7 +21,6 @@ async def init_db(uri: str) -> None:
     """
 
     client = AsyncIOMotorClient(uri)
-    #print(client.address)
     await init_beanie(
         database=client[settings.DB_NAME],
         document_models=[
@@ -41,5 +28,17 @@ async def init_db(uri: str) -> None:
             Patient,
             Immunization,
             Finance,
-        ]
+        ],
     )
+
+
+def init_redis() -> Redis:
+    RETRY = Retry(ExponentialBackoff(), retries=5)
+    client = aioredis.from_url(
+        settings.REDIS_URL, encoding="utf-8", decode_responses=True, retry=RETRY
+    )
+
+    return client
+
+
+CACHE = init_redis()

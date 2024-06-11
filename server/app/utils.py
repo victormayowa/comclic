@@ -7,6 +7,7 @@ from passlib.context import CryptContext
 
 HASHER = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
+
 def create_passwd_hash(passwd: str) -> str:
     """
     returns the hash of the password

@@ -1,10 +1,12 @@
 """
 authentication middlewares
 """
-from datetime import datetime, UTC
-from typing import Annotated, Optional
 
-from fastapi import HTTPException, Security, Cookie, Request, Depends
+from datetime import datetime, UTC
+from typing import Optional
+from redis import Redis
+
+from fastapi import HTTPException, Security, Request, Depends
 from fastapi.responses import JSONResponse
 from fastapi_jwt import JwtAuthorizationCredentials, JwtAccessCookie
 from starlette.status import HTTP_401_UNAUTHORIZED
@@ -13,6 +15,7 @@ from beanie.operators import Or
 from app.models import User, Roles, Perm
 from app.utils import create_passwd_hash, verify_passwd
 from app.settings import settings
+from app.database import CACHE
 
 
 JWT = JwtAccessCookie(
@@ -24,18 +27,21 @@ JWT = JwtAccessCookie(
 
 async def authenticate(
     req: Request,
-    claims: JwtAuthorizationCredentials = Security(JWT)
+    claims: JwtAuthorizationCredentials = Security(JWT),
 ) -> User:
     """Authenticate a user."""
-    token = req.cookies.get(settings.ACCESS_COOKIE_KEY)
     username = claims.subject.get("username")
+    token = req.cookies.get(settings.ACCESS_COOKIE_KEY)
+    cached_token = str(await CACHE.get(f"users:{username}"))
+    if not cached_token or token != cached_token:
+        await CACHE.delete(f"users:{username}")
+        raise HTTPException(
+            status_code=HTTP_401_UNAUTHORIZED, detail="you are not logged in"
+        )
+
     user = await User.find_one(User.username == username)
     if not user:
-        raise HTTPException(status_code=401, detail="Invalid token")
-
-    # cached_token = SESSION_CACHE.get(str(user.id))
-    # if not cached_token or token != cached_token:
-    #     raise HTTPException(status_code=401, detail="you are not logged in")
+        raise HTTPException(status_code=403, detail="Invalid token")
 
     return user
 
@@ -63,103 +69,95 @@ async def register_user(
 
 
 async def login_user(
-    login_id: str, passwd: str, response: JSONResponse
+    login_id: str,
+    passwd: str,
+    response: JSONResponse,
 ) -> User:
     """logs in a user"""
 
     if not login_id or not passwd:
         raise HTTPException(status_code=400, detail="missing credentials")
 
-    user = await User.find_one(
-        Or(User.email == login_id, User.username == login_id)
-    )
+    user = await User.find_one(Or(User.email == login_id, User.username == login_id))
 
     if not user:
-        raise HTTPException(
-            status_code=404, detail="invalid username or email"
-        )
+        raise HTTPException(status_code=404, detail="invalid username or email")
 
     if not verify_passwd(passwd, user.password):
         raise HTTPException(status_code=401, detail="invalid password")
 
-    token = JWT.create_access_token(
+    access_token = JWT.create_access_token(
         {"username": user.username},
     )
 
     response.set_cookie(
         settings.ACCESS_COOKIE_KEY,
-        token,
+        access_token,
         expires=datetime.now(UTC) + settings.ACCESS_TOKEN_DELTA,
         httponly=True,
         samesite="strict",
     )
-    # prev_token = SESSION_CACHE.get(str(user.id))
-    # if prev_token:
-    #     SESSION_CACHE.delete(str(user.id))
 
-    # SESSION_CACHE.setex(str(user.id), token)
+    cached_token = await CACHE.get(f"users:{user.username}")
+    if cached_token:
+        await CACHE.delete(f"users:{user.username}")
+
+    await CACHE.setex(f"users:{user.username}", settings.REDIS_TTL, access_token)
 
     return user
 
 
-# def decode_access_token(token: str):
-#     try:
-#         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-#         username: str = payload.get("sub")
-#         if username is None:
-#             raise HTTPException(status_code=401, detail="Invalid token")
-#         return payload
-#     except JWTError:
-#         raise HTTPException(status_code=401, detail="Invalid token")
-
-
 async def get_user(username: str) -> Optional[User]:
-    return await User.find_one(User.username == username) or await User.find_one(User.email == username)
+    return await User.find_one(User.username == username) or await User.find_one(
+        User.email == username
+    )
 
 
-async def has_roles(
-        roles: list[str],
-        user: User = Depends(authenticate)) -> Perm:
+async def has_roles(user: User, roles: list[Roles]) -> Perm:
     """Verify if user has the required roles"""
 
     for role in roles:
-        if Roles(role) not in user.roles:
-            return False
+        if role not in user.roles:
+            return Perm(user, False)
 
-    return user, True
+    return Perm(user, True)
 
 
-async def is_user_doctor(roles: list[str] = ["Doctor"], perm: Perm = Depends(has_roles)) -> User:
+async def is_user_doctor(user: User = Depends(authenticate)) -> User:
+    perm = await has_roles(user, [Roles.DR])
     if not perm.authorized:
         raise HTTPException(
             status_code=HTTP_401_UNAUTHORIZED,
-            detail="unauthorized: not a doctor",
+            detail="Unauthorized: not a Doctor",
         )
-    
+
     return perm.user
 
 
-async def is_doctor_or_accountant(roles: list[str] = ["Doctor", "Accountant"], perm: Perm = Depends(has_roles)) -> User:
+async def is_doctor_or_accountant(user: User = Depends(authenticate)) -> User:
+    perm = await has_roles(user, [Roles.DR, Roles.AC])
     if not perm.authorized:
         raise HTTPException(
             status_code=HTTP_401_UNAUTHORIZED,
-            detail="unauthorized: not a doctor or accountant",
+            detail="Unauthorized: not a Doctor or Accountant",
         )
-    
+
     return perm.user
 
 
-async def is_chew(roles: list[str] = ["CHEW/RI/others"], perm: Perm = Depends(has_roles)) -> User:
+async def is_chew(user: User = Depends(authenticate)) -> User:
+    perm = await has_roles(user, [Roles.CH])
     if not perm.authorized:
         raise HTTPException(
             status_code=403,
-            detail="unauthorized: not a CHEW/RI/others",
+            detail=f"Unauthorized: not a {Roles.CH}",
         )
 
     return perm.user
 
 
-async def is_nurse_or_doctor(roles: list[str] = ["Nurse", "Doctor"], perm: Perm = Depends(has_roles)) -> User:
+async def is_nurse_or_doctor(user: User = Depends(authenticate)) -> User:
+    perm = await has_roles(user, [Roles.NR, Roles.DR])
     if not perm.authorized:
         raise HTTPException(
             status_code=403,
@@ -167,4 +165,3 @@ async def is_nurse_or_doctor(roles: list[str] = ["Nurse", "Doctor"], perm: Perm 
         )
 
     return perm.user
-

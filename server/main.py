@@ -2,7 +2,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from app.settings import settings
 from app.routers import patient, immunization, finance, auth_router
-from app.database import init_db #get_mongo_uri, db
+from app.database import init_db, CACHE #get_mongo_uri, db
 from fastapi.middleware.cors import CORSMiddleware
 
 ORIGINS = [
@@ -16,6 +16,7 @@ async def lifecycle(app: FastAPI):
     """app lifecycle"""
     # logger.info('starting app')
     await init_db(settings.DATABASE_URL)
+    await CACHE.ping()
     yield
     # logger.info('stopping app')
 
@@ -47,7 +48,11 @@ def create_app() -> FastAPI:
     return app
 
 app = create_app()
+
+
 if __name__ == "__main__":
     import uvicorn
     # uvicorn.run("main:app", host=HOST, port=PORT, reload=RELOAD)
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    HOST = settings.HOST
+    PORT = settings.PORT
+    uvicorn.run("main:app", host=HOST, port=PORT, reload=True)

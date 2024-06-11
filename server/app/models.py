@@ -1,7 +1,8 @@
 """
 Pydantic Models for the API.
 """
-from datetime import datetime, date
+
+from datetime import datetime
 import re
 from typing import Optional, NamedTuple
 from beanie import Indexed
@@ -18,16 +19,18 @@ from pydantic import (
     AliasChoices,
 )
 from pydantic_core import PydanticCustomError
-from beanie import Document, before_event, Update
+from beanie import Document, before_event, Update, Replace
 
 
 class Token(BaseModel):
     access_token: str
     token_type: str
 
+
 class Perm(NamedTuple):
     user: "User"
     authorized: bool
+
 
 class Base(Document):
     """Base model"""
@@ -49,9 +52,10 @@ class Base(Document):
 
         return v.isoformat()
 
-    @before_event(Update)
-    def save_update_at(self) -> None:
+    @before_event(Update, Replace)
+    async def save_update_at(self) -> None:
         self.updated_at = datetime.utcnow()
+        await self.save()
 
 
 class Clinic(Enum):
@@ -59,14 +63,17 @@ class Clinic(Enum):
     Igbemo_CHC = "Igbemo CHC"
     Infant_Welfare_Clinic = "Infant Welfare Clinic"
     Staff_Clinic = "Staff Clinic"
+
+
 class Patient(Base):
     hospital_no: str
-    name: str
+    first_name: str
+    last_name: str
     age: int
     gender: str
     reason_for_visit: Optional[str]
     complaint: str
-    date_of_visit: date
+    last_visit: datetime
     provisional_diagnosis: str
     differential_diagnosis: Optional[str]
     investigations: Optional[str]
@@ -78,30 +85,31 @@ class Patient(Base):
     class Config:
         json_schema_extra = {
             "example": {
-                "hospital_no": "01/05/24",
+                "hospital_no": 123456789,
                 "name": "John Doe",
                 "age": 30,
                 "gender": "Male",
                 "complaint": "Fever",
                 "reason_for_visit": "hfollow uop",
-                "date_of_visit": "2024-04-06",
+                "last_visit": datetime.now(),
                 "provisional_diagnosis": "Malaria",
-                "differential_diagnosis" : "Optional[str]",
+                "differential_diagnosis": "Optional[str]",
                 "treatment": "Prescribed medication",
                 "investigations": "MP",
                 "referral": False,
                 "clinic": ["Okeila CHC"],
-                "entered_by": "string",
+                "entered_by": "Dr Okoro",
             }
         }
+
 
 class Vaccine(Enum):
     HBV = "HBV (Hepatitis B)"
     BCG = "BCG (Bacillus Calmette-Guérin)"
-    OPV0 = "OPV0 (Oral Poliovirus Vaccine - Birth Dose)"
-    PENTA1 = "Penta1/Rota/PCV1 (First dose of Pentavalent vaccine combined with Rotavirus and Pneumococcal Conjugate Vaccine)"
-    PENTA2 = "Penta2/Rota/PCV2 (Second dose of Pentavalent vaccine combined with Rotavirus and Pneumococcal Conjugate Vaccine)"
-    PENTA3 = "Penta3/Rota/PCV3 (Third dose of Pentavalent vaccine combined with Rotavirus and Pneumococcal Conjugate Vaccine)"
+    OPV0 = "OPV0 (First/Birth Dose)"
+    PENTA1 = "Penta1/Rota/PCV1 (First dose)"
+    PENTA2 = "Penta2/Rota/PCV2 (Second dose)"
+    PENTA3 = "Penta3/Rota/PCV3 (Third dose)"
     IPV1 = "IPV1 (Inactivated Poliovirus Vaccine - First dose)"
     IPV2 = "IPV2 (Inactivated Poliovirus Vaccine - Second dose)"
     MEASLES1 = "Measles1 (First dose of Measles Vaccine)"
@@ -114,12 +122,13 @@ class Vaccine(Enum):
     TETANUS4 = "Tetanus4 (Fourth dose of Tetanus Vaccine)"
     TETANUS5 = "Tetanus5 (Fifth dose of Tetanus Vaccine)"
 
+
 class Immunization(Base):
     name: str
     age: int
     gender: str
     vaccine_given: list[Vaccine]
-    date_of_vaccination: date
+    date_of_vaccination: datetime
     entered_by: str
 
     class Config:
@@ -157,29 +166,29 @@ class Finance(Base):
                 "record_officer": "Accountant Smith",
                 "payment_type": "DRF",
                 "daily_total_amount": 10000.0,
-                "source" : ["DRF"],
+                "source": ["DRF"],
                 "reviewed_by_doctor": False,
                 "entered_by": "User123",
             }
         }
 
 
-# User models for various
-
 class Roles(Enum):
     DR = "Doctor"
     NR = "Nurse"
     AC = "Accountant"
     CH = "CHEW/RI/others"
+
+
 class User(Base):
     """
-    Represents a User of the PopChat app
+    Represents a User
     """
 
     username: str = Indexed(str, unique=True, index_type=pymongo.TEXT)
     email: EmailStr = Indexed(str, unique=True, index_type=pymongo.TEXT)
     password: str
-    role: list[Roles]
+    roles: list[Roles]
     reset_token: str | None = None
 
     @model_serializer
@@ -193,7 +202,7 @@ class User(Base):
         return {
             "username": self.username,
             "email": self.email,
-            "role": self.role,
+            "roles": self.roles,
             "id": str(self.id),
         }
 
@@ -255,21 +264,28 @@ class UserBase(BaseModel):
 
         return v
 
+
 class UserRegister(UserBase):
     """user registration schema"""
 
     username: str
     email: EmailStr
     password: str
-    role: list[Roles] = Field(..., description="User roles")
+    roles: list[Roles] = Field(..., description="User roles")
+
+
 class UserLogin(UserBase):
     """user input schema"""
 
     password: str
+
+
 class UserOut(UserBase):
     """user return schema"""
 
     id: str = Field(validation_alias=AliasChoices("_id", "id"))
+
+
 class ResponseModel(BaseModel):
     """response model for the api"""
 
