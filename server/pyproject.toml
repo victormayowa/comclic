@@ -13,11 +13,25 @@ uvicorn = "^0.29.0"
 python-dotenv = "^1.0.1"
 beanie = "^1.25.0"
 pydantic-settings = "^2.2.1"
-fastapi-jwt = "^0.2.0"
 python-decouple = "^3.8"
 python-jose = {extras = ["cryptography"], version = "^3.3.0"}
 passlib = {extras = ["bycrypt"], version = "^1.7.4"}
 python-multipart = "^0.0.9"
+fastapi-jwt = {extras = ["authlib"], version = "^0.3.0"}
+redis = {extras = ["hiredis"], version = "^5.0.5"}
+
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.4.7"
+
+[tool.ruff]
+line-length = 89
+indent-width = 4
+target-version = "py312"
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
 
 
 [build-system]
