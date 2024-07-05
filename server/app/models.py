@@ -25,7 +25,6 @@ class Token(BaseModel):
     access_token: str
     token_type: str
 
-
 class Base(Document):
     """Base model"""
 
@@ -92,6 +91,24 @@ class Patient(Base):
             }
         }
 
+
+class PatientUpdateModel(BaseModel):
+    hospital_no: Optional[str] = None
+    name: Optional[str] = None
+    age: Optional[int] = None
+    gender: Optional[str] = None
+    reason_for_visit: Optional[str] = None
+    complaint: Optional[str] = None
+    date_of_visit: Optional[date] = None
+    provisional_diagnosis: Optional[str] = None
+    differential_diagnosis: Optional[str] = None
+    investigations: Optional[str] = None
+    treatment: Optional[str] = None
+    referral: Optional[bool] = None
+    clinic: Optional[List[Clinic]] = None
+    entered_by: Optional[str] = None
+
+
 class Vaccine(Enum):
     HBV = "HBV (Hepatitis B)"
     BCG = "BCG (Bacillus Calmette-Guérin)"
@@ -110,6 +127,7 @@ class Vaccine(Enum):
     TETANUS3 = "Tetanus3 (Third dose of Tetanus Vaccine)"
     TETANUS4 = "Tetanus4 (Fourth dose of Tetanus Vaccine)"
     TETANUS5 = "Tetanus5 (Fifth dose of Tetanus Vaccine)"
+
 
 class Immunization(Base):
     name: str

@@ -31,6 +31,7 @@ async def register(user: UserRegister) -> ResponseModel:
     """registration route"""
     username = user.username
     email = user.email
+    
     passwd = user.password
     role = user.role
 
