@@ -56,7 +56,7 @@ class Clinic(Enum):
     Infant_Welfare_Clinic = "Infant Welfare Clinic"
     Staff_Clinic = "Staff Clinic"
 class Patient(Base):
-    hospital_no: str
+    hospital_no: str = Indexed(unique=True)
     name: str
     age: int
     gender: str
@@ -106,7 +106,22 @@ class PatientUpdateModel(BaseModel):
     treatment: Optional[str] = None
     referral: Optional[bool] = None
     clinic: Optional[List[Clinic]] = None
-    entered_by: Optional[str] = None
+
+
+class PatientCreateModel(BaseModel):
+    hospital_no: str
+    name: str
+    age: int
+    gender: str
+    reason_for_visit: Optional[str]
+    complaint: str
+    date_of_visit: date
+    provisional_diagnosis: str
+    differential_diagnosis: Optional[str]
+    investigations: Optional[str]
+    treatment: str
+    referral: bool
+    clinic: List[Clinic]
 
 
 class Vaccine(Enum):
@@ -130,6 +145,11 @@ class Vaccine(Enum):
 
 
 class Immunization(Base):
+    card_no: str = Indexed(unique=True)
+    DOB: str
+    contact_no: str
+    address: str
+    caregivers_name: str
     name: str
     age: int
     gender: str
@@ -140,6 +160,11 @@ class Immunization(Base):
     class Config:
         json_schema_extra = {
             "example": {
+                "card_no": "12345",
+                "DOB": "2024-04-06",
+                "contact_no": "123-456-7890",
+                "address": "123 Main St",
+                "caregivers_name": "Jane Doe",
                 "name": "John Doe",
                 "age": 30,
                 "gender": "Male",
@@ -150,6 +175,32 @@ class Immunization(Base):
         }
 
 
+class ImmunizationCreateModel(BaseModel):
+    card_no: str
+    DOB: str
+    contact_no: str
+    address: str
+    caregivers_name: str
+    name: str
+    age: int
+    gender: str
+    vaccine_given: List[Vaccine]
+    date_of_vaccination: date
+
+
+class ImmunizationUpdateModel(BaseModel):
+    card_no: Optional[str] = None
+    DOB: Optional[str] = None
+    contact_no: Optional[str] = None
+    address: Optional[str] = None
+    caregivers_name: Optional[str] = None
+    name: Optional[str] = None
+    age: Optional[int] = None
+    gender: Optional[str] = None
+    vaccine_given: Optional[List[Vaccine]] = None
+    date_of_vaccination: Optional[date] = None
+
+# Finance Model
 class Source(Enum):
     DRF = "Drug Revolving Fund"
     SS = "Surgical Service"
@@ -159,10 +210,11 @@ class Source(Enum):
 
 
 class Finance(Base):
+    record_id: str = Indexed(unique=True) # the record_id will be center_date_source_code
     record_officer: str
     payment_type: str
     source: List[Source]
-    daily_total_amount: float
+    day_total_amount: float
     reviewed_by_doctor: bool
     entered_by: str
 
@@ -171,12 +223,29 @@ class Finance(Base):
             "example": {
                 "record_officer": "Accountant Smith",
                 "payment_type": "DRF",
-                "daily_total_amount": 10000.0,
-                "source" : ["DRF"],
+                "day_total_amount": 10000.0,
+                "source": ["DRF"],
                 "reviewed_by_doctor": False,
                 "entered_by": "User123",
             }
         }
+
+
+class FinanceCreateModel(BaseModel):
+    record_id: str  # this will be center_date_source_code
+    record_officer: str
+    payment_type: str
+    source: List[Source]
+    day_total_amount: float
+    reviewed_by_doctor: bool
+
+
+class FinanceUpdateModel(BaseModel):
+    record_officer: Optional[str] = None
+    payment_type: Optional[str] = None
+    source: Optional[List[Source]] = None
+    day_total_amount: Optional[float] = None
+    reviewed_by_doctor: Optional[bool] = None
 
 
 # User models for various

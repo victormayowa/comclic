@@ -58,10 +58,14 @@ async def is_user_doctor(current_user: User = Depends(get_current_user)):
     return current_user
 
 
-async def is_doctor_or_accountant(current_user: User = Depends(get_current_user)):
+async def is_accountant(current_user: User = Depends(get_current_user)):
     user_roles = [role.value for role in current_user.role]
     print(user_roles)
-    if "Doctor" not in user_roles and "Accountant" not in user_roles:
+    if (
+        "Doctor" not in user_roles
+        and "Accountant" not in user_roles
+        and "Nurse" not in user_roles
+    ):
         raise HTTPException(
             status_code=403, detail="Forbidden: User is not a doctor or accountant"
         )
@@ -70,7 +74,7 @@ async def is_doctor_or_accountant(current_user: User = Depends(get_current_user)
 
 async def is_chew(current_user: User = Depends(get_current_user)):
     user_roles = [role.value for role in current_user.role]
-    if "CHEW/RI/others" not in user_roles:
+    if "CHEW/RI/others" not in user_roles and "Doctor" not in user_roles:
         raise HTTPException(
             status_code=403,
             detail="Forbidden: User is not authorized to add/update immunization records",

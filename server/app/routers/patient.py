@@ -2,13 +2,12 @@ from fastapi import APIRouter, Depends, HTTPException
 from datetime import datetime
 from typing import List
 
-from app.models import Patient, PatientUpdateModel
-from app.middlewares.authware import is_user_doctor
+from app.models import Patient, PatientCreateModel, PatientUpdateModel, User
+from app.middlewares.authware import get_current_user, is_user_doctor
 from app.utils import encode_input
 
 
 router = APIRouter(prefix="/api/patients", tags=["patients"])
-
 
 
 @router.post(
@@ -16,13 +15,22 @@ router = APIRouter(prefix="/api/patients", tags=["patients"])
     status_code=201,
     dependencies=[Depends(is_user_doctor)],
 )
-async def create_patient(patient: Patient) -> Patient:
+async def create_patient(patient: PatientCreateModel, current_user: User = Depends(get_current_user)):
     """Create a new patient record."""
-    new_patient = await Patient.save(patient)
+    existing_patient = await Patient.find_one({"hospital_no": patient.hospital_no})
+    if existing_patient:
+        raise HTTPException(status_code=400, detail="Hospital number already exists")
+    new_patient = Patient(
+        **patient.dict(),
+        entered_by=current_user.username,
+        updated_at=datetime.utcnow()
+    )
+    _ = await new_patient.insert()
     return new_patient
 
 @router.get(
-    "/", response_model=List[Patient], 
+    "/", 
+    response_model=List[Patient], 
     dependencies=[Depends(is_user_doctor)]
 )
 async def list_patients():
@@ -32,7 +40,7 @@ async def list_patients():
 
 
 @router.get(
-    "/{patient}",
+    "/patient",
     response_model=Patient,
     dependencies=[Depends(is_user_doctor)],
 )
@@ -45,21 +53,29 @@ async def get_patient(hospital_no: str):
 
 
 @router.put(
-    "/{patient}",
+    "/patient",
     response_model=Patient,
     dependencies=[Depends(is_user_doctor)],
 )
-async def update_patient(hospital_no: str, patient_data: PatientUpdateModel):
+async def update_patient(
+    hospital_no: str,
+    patient_data: PatientUpdateModel,
+    current_user: User = Depends(get_current_user),
+):
     """Update an existing patient record."""
     existing_patient = await Patient.find_one({"hospital_no": hospital_no})
     if not existing_patient:
         raise HTTPException(status_code=404, detail="Patient not found")
     update_data = patient_data.dict(exclude_unset=True)
     update_data["updated_at"] = datetime.utcnow()
+    update_data["entered_by"] = current_user.username
+    if 'hospital_no' in update_data:
+        del update_data['hospital_no']
     patient = encode_input(update_data)
 
     _ = await existing_patient.update({"$set": patient})
     return existing_patient
+
 
 @router.delete(
     "/{patient}", status_code=204, dependencies=[Depends(is_user_doctor)]
