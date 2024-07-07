@@ -21,6 +21,10 @@ from pydantic_core import PydanticCustomError
 from beanie import Document, before_event, Update
 
 
+class InvalidatedToken(Document):
+    token: str
+    invalidated_at: datetime
+
 class Token(BaseModel):
     access_token: str
     token_type: str
@@ -360,3 +364,16 @@ class ResponseModel(BaseModel):
     message: str
     status_code: int
     data: dict | list | None = None
+
+
+class PasswordResetRequest(BaseModel):
+    email: EmailStr
+
+
+class PasswordReset(BaseModel):
+    password: str
+    password_confirm: str
+
+
+class EmailSchema(BaseModel):
+    email: List[EmailStr]

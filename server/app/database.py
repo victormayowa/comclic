@@ -6,6 +6,7 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from beanie import init_beanie
 
 from app.models import (
+    InvalidatedToken,
     User,
     Patient,
     Immunization,
@@ -41,5 +42,6 @@ async def init_db(uri: str) -> None:
             Patient,
             Immunization,
             Finance,
+            InvalidatedToken,
         ]
     )

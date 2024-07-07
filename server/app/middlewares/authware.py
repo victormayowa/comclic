@@ -5,7 +5,7 @@ from fastapi.security import OAuth2PasswordBearer
 
 from typing import Optional
 
-from app.models import User
+from app.models import InvalidatedToken, User
 from app.settings import settings
 
 ALGORITHM = "HS256"
@@ -41,9 +41,13 @@ def decode_access_token(token: str):
 
 
 async def get_current_user(token: str = Depends(oauth2_scheme)) -> User:
+    # Check if the token is invalidated
+    invalidated_token = await InvalidatedToken.find_one({"token": token})
+    if invalidated_token:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
     payload = decode_access_token(token)
     username: str = payload.get("sub")
-    #print(username)
     user = await get_user(username)
     if not user:
         raise HTTPException(status_code=401, detail="Invalid token")
