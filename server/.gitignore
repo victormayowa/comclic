@@ -1,3 +1,4 @@
 envreal
 .env
+*.env
 __pycache__
